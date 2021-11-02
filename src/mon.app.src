@@ -1,0 +1,14 @@
+{ application, 'mon'
+, [ {vsn, git}
+  , {description, "A Clojerl application"}
+  , {modules, []}
+  , { applications
+    , [ stdlib
+      , kernel
+      , cowboy
+      , clojerl
+      ]
+    }
+  , {mod, {'mon.app', []}}
+  ]
+}.

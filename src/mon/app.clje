@@ -1,0 +1,25 @@
+(ns mon.app
+  (:require [mon.sup :as sup]
+            [mon.reloader :as re]
+            [mon.http :as http]))
+
+(def routes '{:_ (["/:api/[:what/[:opt]]" :mon.http nil])})
+
+(comment def routes #erl(#erl[:_ #erl(#erl["/hello/world" :mon.http nil])]))
+
+(def erl-routes (-> routes clj->erl maps/to_list))
+
+(defn start [type args]
+  (let* [_ (#erl application/start :mnesia)
+         ;;Cowboy router 
+         dispatch (cowboy_router/compile erl-routes)
+         result (cowboy/start_clear :mon.listener
+                                    #erl(#erl[:port 8080])
+                                    (clj->erl {:env {:dispatch dispatch}}))
+         link-result (sup/start-link)]
+        (http/init-db)
+        (print link-result)
+        #erl[:ok (erlang/self)]))
+
+(defn stop [state]
+  state)

@@ -1,0 +1,54 @@
+(ns mon.http)
+
+(declare handle)
+
+(defn init-db []
+  (#erl ets/new :users_list #erl(:public :named_table)))
+
+(defn init
+  [req state]
+  (let [{:keys [bindings]} req
+        {:keys [api what opt]} bindings
+        reply (handle api what opt req)
+        req1 (cowboy_req/reply 200
+                               #erl{"content-type" "text/plain"}
+                               reply
+                               req)]
+    #erl[:ok req1 state]))
+
+(defmulti handle
+  (fn [api what _ _]
+    (case api
+      "login" api
+      "join" api
+      "hello" [api what]
+      api)))
+
+(defn read-param-body [body]
+  (->> (-> (second body)
+           (string/split "&"))
+       (map #(string/split % "="))
+       (map (fn [[key val]] [(keyword key) (str val)]))
+       (into {})))
+
+(defmethod handle "login" [_ _ _ data]
+  (let [body (cowboy_req/read_body data)
+        _ (print body)
+        [{:keys [id password]}] (read-param-body body)]
+    (case (ets/lookup :users_list id)
+      password "{\"result\": \"ok\"}"
+      "{\"result\": \"fail\"}")))
+
+(defmethod handle "join" [_ _ _ data]
+  (let [body (cowboy_req/read_body data)
+        prop (read-param-body body)
+        {:keys [id password]} prop]
+    (#erl ets/insert :users_list #erl[id password])
+    "{\"result\": \"join\"}"))
+
+(defmethod handle ["hello" "world"] [_ _ _ _]
+  "{\"result\": \"Hello world!\"}")
+
+(defmethod handle :default [_ _ _ _]
+  "{\"result\": \"error\"}")
+

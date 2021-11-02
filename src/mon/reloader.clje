@@ -1,0 +1,35 @@
+(ns mon.reloader)
+(comment (declare loop)
+(declare check)
+
+(defn start []
+  (let [pid (erlang/spawn :mon.reloader loop #erl((erlang/localtime)))]
+    (timer/send_interval (timer/seconds 1) pid :check)))
+
+(def loop
+  (fn* [from]
+       (receive*
+        :check
+        (let [to (erlang/localltime)
+              [module filename] (code/all_loaded)]
+          (do
+            (when (erlang/is_list filename)
+              (check from to module filename))
+            (loop to)))
+        :other
+        (do
+          (print from)
+          (loop from)))))
+
+(defn check [from to module filename]
+  (let [[result file_info] (file/read_file_info filename)
+        [_tag _code _type _access _atime mtime] file_info]
+    (if (and
+         (= result :ok)
+         (>= mtime from)
+         (< mtime to))
+      (erlang/reload module)
+      nil)))
+
+(defn reload [module]
+  (print "Reloading " module "...")))

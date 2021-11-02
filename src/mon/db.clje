@@ -1,0 +1,14 @@
+(ns mon.db)
+
+(def users #erl[:users :id :password :token 0 0 0]) ;level, exp, point
+
+(defn install []
+  (let [ok (mnesia/create_schema #erl(:node))]
+    (#erl application/start :mnesia)
+    (#erl mnesia/create_table users #erl(#erl[:attributes, (rest users)]
+                                         #erl[:disc_copies #erl(:node)]))
+    (#erl application/stop :mnesia)))
+
+(defn uninstall []
+  (#erl application/stop :mnesia)
+  (#erl mnesia/delete_schema #erl(:node)))
